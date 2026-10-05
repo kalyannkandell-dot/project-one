@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MemberType {
+  BASIC
+  PREMIUM
+}
+
+enum StaffType {
+  LIBRARIAN
+  MANAGEMENT
+}
+
+enum CopyStatus {
+  AVAILABLE
+  RENTED
+  DAMAGED
+}
+
+enum Rating {
+  BAD
+  OK
+  GOOD
+  GREAT
+}
+
+model Member {
+  memberId    Int        @id @default(autoincrement())
+  name        String
+  email       String     @unique
+  phoneNumber String
+  joinedAt    DateTime   @default(now())
+  memberType  MemberType @default(BASIC)
+  rentals     Rental[]
+}
+
+model Staff {
+  staffId         Int       @id @default(autoincrement())
+  joinedAt        DateTime  @default(now())
+  name            String
+  email           String    @unique
+  staffRole       StaffType
+  issuedRentals   Rental[]  @relation("issuedBy")
+  returnedRentals Rental[]  @relation("returnedBy")
+}
+
+model Author {
+  authorId     Int    @id @default(autoincrement())
+  name         String
+  birthCountry String
+  books        Book[]
+}
+
+model Book {
+  bookId          Int    @id @default(autoincrement())
+  title           String
+  isbn            String @unique
+  genre           String
+  publicationYear Int
+  authorId        Int
+  author          Author @relation(fields: [authorId], references: [authorId])
+  copies          Copy[]
+
+  @@index([authorId])
+}
+
+model Copy {
+  copyId  Int        @id @default(autoincrement())
+  status  CopyStatus @default(AVAILABLE)
+  bookId  Int
+  book    Book       @relation(fields: [bookId], references: [bookId], onDelete: Cascade)
+  rentals Rental[]
+
+  @@index([bookId])
+}
+
+model Rental {
+  rentId          Int       @id @default(autoincrement())
+  rentedAt        DateTime  @default(now())
+  dueDate         DateTime
+  returnedDate    DateTime?
+  memberId        Int
+  member          Member    @relation(fields: [memberId], references: [memberId])
+  staffIdIssued   Int
+  issuedBy        Staff     @relation("issuedBy", fields: [staffIdIssued], references: [staffId])
+  staffIdReturned Int?
+  returnedBy      Staff?    @relation("returnedBy", fields: [staffIdReturned], references: [staffId])
+  copyId          Int
+  copy            Copy      @relation(fields: [copyId], references: [copyId])
+  review          Review?
+
+  @@index([memberId])
+  @@index([copyId])
+  @@index([staffIdIssued])
+  @@index([staffIdReturned])
+}
+
+model Review {
+  reviewId Int     @id @default(autoincrement())
+  rating   Rating
+  comment  String?
+  rentId   Int     @unique
+  rent     Rental  @relation(fields: [rentId], references: [rentId], onDelete: Cascade)
+}
